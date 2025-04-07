@@ -1,15 +1,14 @@
-from flask import Flask, request, jsonify
-from transformers import pipeline
+from flask import Flask, request
 
 app = Flask(__name__)
 
-# Load the classification pipeline using PyTorch
+from transformers import pipeline
 pipe = pipeline("text-classification", model="tabularisai/multilingual-sentiment-analysis", framework="pt")
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.get_json()
-    sentence = data.get("sentence")
+    # Try to get sentence from form (Twilio will send 'Body' for SMS/WhatsApp)
+    sentence = request.form.get("Body") or request.json.get("sentence") if request.is_json else None
 
     if not sentence:
         return "No sentence provided", 400
@@ -17,7 +16,7 @@ def analyze():
     result = pipe(sentence)
     label = result[0]["label"]
 
-    return label  # Return only the label as a string
+    return label  # Just return label as string
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=10000)
