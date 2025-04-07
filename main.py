@@ -1,14 +1,13 @@
-from flask import Flask, request
+from flask import Flask, request, Response
+from transformers import pipeline
 
 app = Flask(__name__)
 
-from transformers import pipeline
 pipe = pipeline("text-classification", model="tabularisai/multilingual-sentiment-analysis", framework="pt")
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    # Try to get sentence from form (Twilio will send 'Body' for SMS/WhatsApp)
-    sentence = request.form.get("Body") or request.json.get("sentence") if request.is_json else None
+    sentence = request.form.get("Body")  # Twilio sends the WhatsApp text in "Body"
 
     if not sentence:
         return "No sentence provided", 400
@@ -16,7 +15,13 @@ def analyze():
     result = pipe(sentence)
     label = result[0]["label"]
 
-    return label  # Just return label as string
+    # Respond with TwiML (Twilio Markup Language) to send message back
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>Sentiment: {label}</Message>
+</Response>"""
+
+    return Response(twiml, mimetype="application/xml")
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=10000)
